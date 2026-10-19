@@ -72,3 +72,38 @@ left unfinished. Append as you go; a line or two per entry is right.
 - Row virtualisation (paging covers it for now), name search / team filter.
 - Holidays, time-off, effective-dated capacity.
 - Go handler tests.
+
+---
+
+## Verified on the real stack (make up, Chrome)
+
+The verification above ran on a local substitute stack. This is the `make up` check it
+deferred.
+
+- `make up` builds on Go 1.26 / Postgres 17 and runs. Health check reports 500 people.
+- Recomputed people 1-5 for 29 Dec - 18 Jan with a separate SQL query. The API matches
+  the numbers above. Also confirmed the data notes: all 8,413 assignment groups are 15
+  fragments, their daily totals are only 2/4/5/6/8, and 3,111 end on a weekend.
+- curl: bad date, reversed range, 53-week range and limit=0 all return 400. Negative
+  hours 422, unknown person 404, non-JSON body 400. 500 people x 26 weeks in ~0.26s.
+- Chrome:
+  - Edit Cem 20 -> 10 flips his Jan 12 cell to 12/10 over with no reload.
+  - Forced PATCH to 500: draft kept, error and Retry shown, grid unchanged. Cem put
+    back to 20 afterwards.
+  - Week back and forward and "This week" move the headers and the URL.
+  - A 60-week URL range is capped to 26 columns.
+  - Paging shows 101-200 of 500.
+  - Forced GET failure: the banner keeps the old grid, and Retry recovers on the same
+    page.
+- Bug found: typing a date into From/To fired a change per segment. Each intermediate
+  date was snapped to Monday and written back, overwriting the keystrokes (typing
+  04/02/2026 landed on 01/12/2025). Picking from the calendar was fine. Fixed in
+  f9185f4: the field shows the draft while focused and snaps on blur.
+- Vitest 9/9, `tsc --noEmit` clean.
+
+Left as is:
+- Moving From past To collapses the range to one week. Keeping the week count may be
+  nicer.
+- An un-normalised range in the initial URL is snapped in the UI but not rewritten in
+  the address bar until the next change.
+- "Has room" and "Nothing allocated" colours are close; worth more contrast.
