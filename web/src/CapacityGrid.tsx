@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, fetchCapacity, updateWeeklyHours, type CapacityPerson, type CapacityResponse, type Person } from './api'
 import { applyPerson, cellStatus, formatHours, parseWeeklyHours, reconcile, type SavedHours } from './capacity'
-import { addWeeks, formatWeek, formatYear, MAX_WEEKS, mondayOf, todayISO, weekCount } from './dates'
+import { addWeeks, formatWeek, formatYear, isValidDate, MAX_WEEKS, mondayOf, todayISO, weekCount } from './dates'
 
 type Props = {
   from: string
@@ -74,19 +74,8 @@ export function CapacityGrid({ from, to, onRangeChange }: Props) {
             Week ›
           </button>
         </div>
-        <label>
-          From
-          <input type="date" value={from} onChange={(e) => e.target.value && onRangeChange({ from: e.target.value, to })} />
-        </label>
-        <label>
-          To
-          <input
-            type="date"
-            value={to}
-            min={from}
-            onChange={(e) => e.target.value && onRangeChange({ from, to: e.target.value })}
-          />
-        </label>
+        <DateField label="From" value={from} onCommit={(d) => onRangeChange({ from: d, to })} />
+        <DateField label="To" value={to} min={from} onCommit={(d) => onRangeChange({ from, to: d })} />
         <span className="hint">
           {weeks} {weeks === 1 ? 'week' : 'weeks'} (max {MAX_WEEKS}), Mon to Sun
         </span>
@@ -284,6 +273,40 @@ export function HoursEditor({ person, onSaved }: { person: Person; onSaved: (p: 
         </span>
       )}
     </form>
+  )
+}
+
+// A date input that keeps showing what the manager typed while it has focus.
+// Typing fires a change per segment, and each valid intermediate date is
+// snapped to its Monday by the range; writing that back mid-typing would
+// overwrite the keystrokes. The snapped value shows once focus leaves.
+function DateField({
+  label,
+  value,
+  min,
+  onCommit,
+}: {
+  label: string
+  value: string
+  min?: string
+  onCommit: (date: string) => void
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+  return (
+    <label>
+      {label}
+      <input
+        type="date"
+        value={draft ?? value}
+        min={min}
+        onFocus={() => setDraft(value)}
+        onBlur={() => setDraft(null)}
+        onChange={(e) => {
+          setDraft(e.target.value)
+          if (isValidDate(e.target.value)) onCommit(e.target.value)
+        }}
+      />
+    </label>
   )
 }
 
